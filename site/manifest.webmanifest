@@ -1,0 +1,10 @@
+{
+  "name": "Samsung Galaxy F54 Display Complaint Board",
+  "short_name": "F54 Complaints",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#0f766e",
+  "description": "Publicly indexed complaint board tracking Samsung Galaxy F54 display green and pink line issue threads and replies.",
+  "icons": []
+}
