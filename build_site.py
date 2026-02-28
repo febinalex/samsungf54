@@ -18,7 +18,7 @@ def main() -> None:
     threads = data.get("threads", [])
     topic_counts = Counter(t.get("topic_group", "Other") for t in threads)
 
-    base_url = os.getenv("SITE_BASE_URL", "https://example.com").rstrip("/")
+    base_url = os.getenv("SITE_BASE_URL", "https://febinalex.github.io/samsungf54").rstrip("/")
     page_url = f"{base_url}/"
     image_url = f"{base_url}/og-image.svg"
     now_iso = datetime.now(timezone.utc).isoformat()
