@@ -1,10 +1,40 @@
 {
+  "id": "/samsungf54/",
   "name": "Samsung Galaxy F54 Display Complaint Board",
   "short_name": "F54 Complaints",
-  "start_url": "/",
+  "start_url": "/samsungf54/",
+  "scope": "/samsungf54/",
   "display": "standalone",
   "background_color": "#f4f7fb",
   "theme_color": "#0f766e",
   "description": "Publicly indexed complaint board tracking Samsung Galaxy F54 display green and pink line issue threads and replies.",
-  "icons": []
+
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+
+  "screenshots": [
+    {
+      "src": "screenshot-mobile.png",
+      "sizes": "540x720",
+      "type": "image/png"
+    },
+    {
+      "src": "screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ]
 }
