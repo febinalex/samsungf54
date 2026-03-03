@@ -12,13 +12,13 @@
   "icons": [
     {
       "src": "icon-192.png",
-      "sizes": "192x192",
+      "sizes": "312x312",
       "type": "image/png",
       "purpose": "any"
     },
     {
       "src": "icon-512.png",
-      "sizes": "512x512",
+      "sizes": "321x428",
       "type": "image/png",
       "purpose": "any"
     }
@@ -32,9 +32,10 @@
     },
     {
       "src": "screenshot-desktop.png",
-      "sizes": "1280x720",
+      "sizes": "690×485",
       "type": "image/png",
       "form_factor": "wide"
     }
   ]
 }
+
