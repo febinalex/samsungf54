@@ -12,13 +12,13 @@
   "icons": [
     {
       "src": "icon-192.png",
-      "sizes": "312x312",
+      "sizes": "312*312",
       "type": "image/png",
       "purpose": "any"
     },
     {
       "src": "icon-512.png",
-      "sizes": "321x428",
+      "sizes": "512*512",
       "type": "image/png",
       "purpose": "any"
     }
@@ -27,15 +27,16 @@
   "screenshots": [
     {
       "src": "screenshot-mobile.png",
-      "sizes": "540x720",
+      "sizes": "321*428",
       "type": "image/png"
     },
     {
       "src": "screenshot-desktop.png",
-      "sizes": "690×485",
+      "sizes": "690*485",
       "type": "image/png",
       "form_factor": "wide"
     }
   ]
 }
+
 
