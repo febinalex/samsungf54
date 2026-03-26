@@ -22,6 +22,10 @@ class Message:
     subject: Optional[str]
     text: str
     source: str
+    kudos: int = 0
+    is_solution: bool = False
+    author_avatar: Optional[str] = None
+    url: Optional[str] = None
 
 
 @dataclass
@@ -34,6 +38,7 @@ class ThreadData:
     topic_group: str
     fetched_at_utc: str
     messages: List[Message]
+    views: int = 0
 
 
 def read_links(path: Path) -> List[str]:
@@ -94,8 +99,8 @@ def group_from_url(url: str) -> str:
     return f"{parsed.netloc} / {board}"
 
 
-def classify_topic(title: str) -> str:
-    t = title.lower()
+def classify_topic(title: str, content: str) -> str:
+    t = f"{title} {content}".lower()
     if "pink line" in t or "pink-line" in t or "pink lines" in t:
         return "Pink Line Issue"
     if "green line" in t or "green-line" in t or "green lines" in t:
@@ -104,6 +109,10 @@ def classify_topic(title: str) -> str:
         return "Bricked After Update"
     if "update" in t:
         return "Update Related"
+    if "display" in t or "screen" in t:
+        return "Display Issue"
+    if "battery" in t or "charging" in t:
+        return "Battery/Power Issue"
     return "Other"
 
 
@@ -118,6 +127,17 @@ def parse_message_node(node: ET.Element, source: str) -> Optional[Message]:
     subject = node.findtext("subject")
     msg_id = node.findtext("id")
 
+    kudos = 0
+    kudos_text = node.findtext("./kudos/count")
+    if kudos_text and kudos_text.isdigit():
+        kudos = int(kudos_text)
+
+    is_solution = node.findtext("is_solution") == "true"
+    author_avatar = node.findtext("./author/avatar/profile")
+    
+    # Lithium typically puts the full URL in view_href attribute or element
+    view_url = node.attrib.get("view_href") or node.findtext("view_href")
+
     return Message(
         id=msg_id,
         author=author,
@@ -125,6 +145,10 @@ def parse_message_node(node: ET.Element, source: str) -> Optional[Message]:
         subject=subject,
         text=text,
         source=source,
+        kudos=kudos,
+        is_solution=is_solution,
+        author_avatar=author_avatar,
+        url=view_url,
     )
 
 
@@ -183,8 +207,12 @@ def fetch_comment_messages(domain: str, msg_id: str) -> List[Message]:
 
         if not page_ids:
             break
-        if total_count is not None and len(ids) >= total_count:
-            break
+        
+        # Explicit check to fix "int" and "None" comparison error
+        if total_count is not None:
+            if len(ids) >= total_count:
+                break
+        
         page += 1
 
     msgs: List[Message] = []
@@ -219,15 +247,28 @@ def scrape_link(url: str) -> ThreadData:
         all_msgs.append(msg)
 
     title = root_msg.subject or f"Thread {root_id}"
+    
+    # Try to extract total views from the root message response
+    views = 0
+    try:
+        xml_text = request_text(f"https://{parsed.netloc}/restapi/vc/messages/id/{root_id}")
+        root = ET.fromstring(xml_text)
+        view_text = root.findtext("./message/views/count")
+        if view_text and view_text.isdigit():
+            views = int(view_text)
+    except Exception:
+        pass
+
     return ThreadData(
         url=url,
         domain=parsed.netloc,
         group=group_from_url(url),
         thread_id=root_id,
         title=title,
-        topic_group=classify_topic(title),
+        topic_group=classify_topic(title, root_msg.text),
         fetched_at_utc=datetime.now(timezone.utc).isoformat(),
         messages=all_msgs,
+        views=views,
     )
 
 

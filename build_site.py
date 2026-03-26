@@ -30,6 +30,7 @@ def main() -> None:
         "total_threads": len(threads),
         "total_messages": sum(len(t.get("messages", [])) for t in threads),
         "total_replies": sum(max(len(t.get("messages", [])) - 1, 0) for t in threads),
+        "total_views": sum(t.get("views", 0) for t in threads),
         "topics": dict(topic_counts),
         "threads": threads,
     }
@@ -212,12 +213,55 @@ def render_html(payload: dict, page_url: str, image_url: str, modified_iso: str)
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Segoe UI", Tahoma, sans-serif;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background:
         radial-gradient(circle at 0 0, #ffe5e5 0, transparent 28%),
         radial-gradient(circle at 100% 0, #ddfff7 0, transparent 24%),
         var(--bg);
       color: var(--text);
+    }
+    .msg-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      flex-shrink: 0;
+      object-fit: cover;
+    }
+    .kudos {
+      font-size: 11px;
+      color: #7c2d12;
+      background: #ffedd5;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .solution-mark {
+      color: #15803d;
+      background: #dcfce7;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      border: 1px solid #bbf7d0;
+      margin-left: 8px;
+    }
+    .view-count {
+      color: var(--muted);
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
     .container {
       max-width: 1120px;
@@ -447,9 +491,9 @@ def render_html(payload: dict, page_url: str, image_url: str, modified_iso: str)
       ["Threads", DATA.total_threads || 0],
       ["Posts + Replies", DATA.total_messages || 0],
       ["Replies", DATA.total_replies || 0],
-      ["Links", DATA.total_links || 0],
+      ["Total Views", DATA.total_views || 0],
     ];
-    stats.innerHTML = statItems.map(([k, v]) => `<div class="stat"><b>${esc(v)}</b>${esc(k)}</div>`).join("");
+    stats.innerHTML = statItems.map(([k, v]) => `<div class="stat"><b>${v >= 1000 ? (v/1000).toFixed(1) + 'k' : esc(v)}</b>${esc(k)}</div>`).join("");
 
     const topics = Object.keys(DATA.topics || {}).sort((a, b) => a.localeCompare(b));
     topicFilter.innerHTML = `<option value="">All Topics</option>` +
@@ -506,22 +550,10 @@ def render_html(payload: dict, page_url: str, image_url: str, modified_iso: str)
       const replies = msgs.filter(m => m !== rootPost);
       const openAttr = idx < 2 ? " open" : "";
 
-      const postHtml = rootPost ? `
-        <article class="post">
-          <div class="post-label">Original Complaint</div>
-          <div class="msg-meta">${esc(rootPost.author || "Unknown user")} | ${esc(rootPost.published || "Unknown time")}</div>
-          <div class="msg-text">${esc(rootPost.text || "")}</div>
-        </article>
-      ` : `<div class="empty">Original post text unavailable.</div>`;
+      const postHtml = rootPost ? renderMessage(rootPost, "Original Complaint", "post") : `<div class="empty">Original post text unavailable.</div>`;
 
       const replyHtml = replies.length
-        ? replies.map((r, i) => `
-          <article class="reply">
-            <div class="reply-label">Reply ${i + 1}</div>
-            <div class="msg-meta">${esc(r.author || "Unknown user")} | ${esc(r.published || "Unknown time")}</div>
-            <div class="msg-text">${esc(r.text || "")}</div>
-          </article>
-        `).join("")
+        ? replies.map((r, i) => renderMessage(r, `Reply ${i + 1}`, "reply")).join("")
         : `<div class="empty">No replies found for this thread.</div>`;
 
       return `
@@ -531,9 +563,10 @@ def render_html(payload: dict, page_url: str, image_url: str, modified_iso: str)
             <div class="meta">
               <span class="badge badge-alert">${esc(t.topic_group || "Issue")}</span>
               <span class="badge badge-brand">${replies.length} replies</span>
+              <span class="view-count" title="Total thread views">👁️ ${esc(t.views || 0)}</span>
               <span>${esc(t.group || "Unknown group")}</span>
-              <span>Thread ID: ${esc(t.thread_id || "N/A")}</span>
-              <span><a href="${escAttr(t.url || "#")}" target="_blank" rel="noopener noreferrer">Open source thread</a></span>
+              <span>ID: ${esc(t.thread_id || "N/A")}</span>
+              <span><a href="${escAttr(t.url || "#")}" target="_blank" rel="noopener noreferrer">Source Thread ↗</a></span>
             </div>
           </header>
           <div class="body">
@@ -544,6 +577,28 @@ def render_html(payload: dict, page_url: str, image_url: str, modified_iso: str)
             </details>
           </div>
         </section>
+      `;
+    }
+
+    function renderMessage(m, label, className) {
+      const solutionHtml = m.is_solution ? `<span class="solution-mark">✅ Solution</span>` : "";
+      const avatarHtml = m.author_avatar ? `<img class="avatar" src="${escAttr(m.author_avatar)}" alt="" loading="lazy">` : `<div class="avatar"></div>`;
+      const kudosHtml = m.kudos > 0 ? `<span class="kudos" title="${m.kudos} kudos">❤️ ${m.kudos}</span>` : "";
+      const permalinkHtml = m.url ? `<a href="${escAttr(m.url)}" target="_blank" class="muted" style="font-size:10px; margin-left:auto;">permalink ↗</a>` : "";
+
+      return `
+        <article class="${className}">
+          <div class="post-label">${esc(label)} ${solutionHtml}</div>
+          <div class="msg-header">
+            ${avatarHtml}
+            <div class="msg-meta" style="margin-bottom:0">
+              <b>${esc(m.author || "Unknown")}</b> | ${esc(m.published || "Unknown time")}
+              ${kudosHtml}
+            </div>
+            ${permalinkHtml}
+          </div>
+          <div class="msg-text">${esc(m.text || "")}</div>
+        </article>
       `;
     }
 
